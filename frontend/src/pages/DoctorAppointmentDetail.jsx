@@ -10,6 +10,7 @@ const DoctorAppointmentDetail = () => {
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState(null);
+  const [existingPrescription, setExistingPrescription] = useState(undefined);
 
   useEffect(() => {
     const fetchAppointment = async () => {
@@ -29,7 +30,17 @@ const DoctorAppointmentDetail = () => {
       }
     };
 
+    const fetchPrescription = async () => {
+      try {
+        const response = await api.get(`/api/prescriptions/appointment/${id}`);
+        setExistingPrescription(response.data?.data?.prescription || null);
+      } catch (err) {
+        setExistingPrescription(null);
+      }
+    };
+
     fetchAppointment();
+    fetchPrescription();
   }, [id]);
 
   const handleStartConsultation = async () => {
