@@ -15,7 +15,17 @@ const generateToken = (user) => {
 
 const register = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const {
+      name,
+      email,
+      password,
+      role,
+      specialization,
+      qualification,
+      experience,
+      consultationFee,
+      bio
+    } = req.body;
 
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
       return res.status(400).json({
@@ -78,6 +88,23 @@ const register = async (req, res) => {
       }
     });
 
+    if (normalizedRole === 'PATIENT') {
+      await prisma.patient.create({
+        data: { userId: user.id }
+      });
+    } else if (normalizedRole === 'DOCTOR') {
+      await prisma.doctor.create({
+        data: {
+          userId: user.id,
+          specialization: specialization || 'General Medicine',
+          qualification: qualification || 'MBBS',
+          experience: Number(experience) || 0,
+          consultationFee: Number(consultationFee) || 500,
+          bio: bio || null
+        }
+      });
+    }
+
     const token = generateToken(user);
 
     return res.status(201).json({
@@ -131,6 +158,30 @@ const login = async (req, res) => {
         success: false,
         message: 'Invalid email or password'
       });
+    }
+
+    if (user.role === 'PATIENT') {
+      const patientProfile = await prisma.patient.findUnique({
+        where: { userId: user.id }
+      });
+      if (!patientProfile) {
+        await prisma.patient.create({ data: { userId: user.id } });
+      }
+    } else if (user.role === 'DOCTOR') {
+      const doctorProfile = await prisma.doctor.findUnique({
+        where: { userId: user.id }
+      });
+      if (!doctorProfile) {
+        await prisma.doctor.create({
+          data: {
+            userId: user.id,
+            specialization: 'General Medicine',
+            qualification: 'MBBS',
+            experience: 0,
+            consultationFee: 500
+          }
+        });
+      }
     }
 
     const token = generateToken(user);

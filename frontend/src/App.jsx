@@ -6,6 +6,11 @@ import Register from './pages/Register';
 import PatientDashboard from './pages/PatientDashboard';
 import DoctorDashboard from './pages/DoctorDashboard';
 import ReceptionDashboard from './pages/ReceptionDashboard';
+import DoctorList from './pages/DoctorList';
+import DoctorProfile from './pages/DoctorProfile';
+import BookAppointment from './pages/BookAppointment';
+import PatientAppointments from './pages/PatientAppointments';
+import DoctorAppointmentDetail from './pages/DoctorAppointmentDetail';
 
 const RootRedirect = () => {
   const { user, isAuthenticated, loading } = useAuth();
@@ -54,10 +59,50 @@ function App() {
             }
           />
           <Route
+            path="/patient/doctors"
+            element={
+              <ProtectedRoute allowedRoles={['PATIENT']}>
+                <DoctorList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/patient/doctors/:id"
+            element={
+              <ProtectedRoute allowedRoles={['PATIENT']}>
+                <DoctorProfile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/patient/appointments/book/:doctorId"
+            element={
+              <ProtectedRoute allowedRoles={['PATIENT']}>
+                <BookAppointment />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/patient/appointments"
+            element={
+              <ProtectedRoute allowedRoles={['PATIENT']}>
+                <PatientAppointments />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/doctor/dashboard"
             element={
               <ProtectedRoute allowedRoles={['DOCTOR']}>
                 <DoctorDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/doctor/appointments/:id"
+            element={
+              <ProtectedRoute allowedRoles={['DOCTOR']}>
+                <DoctorAppointmentDetail />
               </ProtectedRoute>
             }
           />

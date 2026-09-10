@@ -13,12 +13,57 @@ enum Role {
   RECEPTION
 }
 
+enum AppointmentStatus {
+  BOOKED
+  CANCELLED
+  COMPLETED
+}
+
 model User {
-  id           String   @id @default(uuid())
+  id           String    @id @default(uuid())
   name         String
-  email        String   @unique
+  email        String    @unique
   passwordHash String
-  role         Role     @default(PATIENT)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  role         Role      @default(PATIENT)
+  patient      Patient?
+  doctor       Doctor?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Patient {
+  id           String        @id @default(uuid())
+  userId       String        @unique
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  appointments Appointment[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Doctor {
+  id              String        @id @default(uuid())
+  userId          String        @unique
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  specialization  String
+  qualification   String
+  experience      Int           @default(0)
+  consultationFee Float         @default(0)
+  bio             String?
+  appointments    Appointment[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model Appointment {
+  id              String            @id @default(uuid())
+  patientId       String
+  patient         Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctorId        String
+  doctor          Doctor            @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  appointmentDate String
+  appointmentTime String
+  reason          String?
+  status          AppointmentStatus @default(BOOKED)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
 }
