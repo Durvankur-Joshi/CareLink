@@ -155,6 +155,12 @@ const PatientDashboard = () => {
           >
             My Appointments
           </Link>
+          <Link
+            to="/patient/labs"
+            className="w-full block py-2.5 px-4 bg-cyan-800 hover:bg-cyan-700 text-cyan-100 text-xs font-semibold rounded-lg text-center transition-colors shadow-sm"
+          >
+            Lab Tests & Medical Reports
+          </Link>
         </div>
 
         <div className="pt-2 border-t border-slate-700/60">

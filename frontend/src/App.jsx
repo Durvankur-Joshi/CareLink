@@ -14,6 +14,7 @@ import DoctorAppointmentDetail from './pages/DoctorAppointmentDetail';
 import ReceptionAppointmentDetail from './pages/ReceptionAppointmentDetail';
 import DoctorConsultation from './pages/DoctorConsultation';
 import PatientConsultationView from './pages/PatientConsultationView';
+import PatientLabs from './pages/PatientLabs';
 
 const RootRedirect = () => {
   const { user, isAuthenticated, loading } = useAuth();
@@ -90,6 +91,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['PATIENT']}>
                 <PatientAppointments />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/patient/labs"
+            element={
+              <ProtectedRoute allowedRoles={['PATIENT']}>
+                <PatientLabs />
               </ProtectedRoute>
             }
           />

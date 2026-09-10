@@ -6,6 +6,7 @@ const DoctorAppointmentDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [appointment, setAppointment] = useState(null);
+  const [labOrders, setLabOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState(null);
@@ -15,8 +16,12 @@ const DoctorAppointmentDetail = () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await api.get(`/api/appointments/${id}`);
-        setAppointment(response.data?.data?.appointment || null);
+        const [aptRes, labRes] = await Promise.all([
+          api.get(`/api/appointments/${id}`),
+          api.get(`/api/labs/orders/appointment/${id}`).catch(() => ({ data: { data: { labOrders: [] } } }))
+        ]);
+        setAppointment(aptRes.data?.data?.appointment || null);
+        setLabOrders(labRes.data?.data?.labOrders || []);
       } catch (err) {
         setError(err.response?.data?.message || 'Failed to load appointment details');
       } finally {
@@ -134,6 +139,31 @@ const DoctorAppointmentDetail = () => {
               )}
             </div>
           </div>
+
+          {labOrders.length > 0 && (
+            <div className="space-y-3">
+              <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">Diagnostic Lab Orders ({labOrders.length})</div>
+              <div className="p-4 rounded-lg bg-slate-900/70 border border-slate-700/60 space-y-2">
+                {labOrders.map((o) => (
+                  <div key={o.id} className="flex justify-between items-center text-xs border-b border-slate-800 last:border-0 pb-2 last:pb-0">
+                    <div>
+                      <span className="font-bold text-white">{o.testName}</span>
+                      {o.instructions && <span className="text-slate-400 ml-2">({o.instructions})</span>}
+                    </div>
+                    <span className={`px-2 py-0.5 text-[11px] font-semibold rounded border ${
+                      o.status === 'REVIEWED'
+                        ? 'bg-emerald-950 border-emerald-700 text-emerald-300'
+                        : o.status === 'UPLOADED'
+                        ? 'bg-cyan-950 border-cyan-700 text-cyan-300'
+                        : 'bg-amber-950 border-amber-700 text-amber-300'
+                    }`}>
+                      {o.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="pt-3 border-t border-slate-700 flex justify-between items-center">
             <Link
