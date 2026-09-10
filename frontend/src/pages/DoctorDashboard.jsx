@@ -1,16 +1,19 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 
 const DoctorDashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [appointments, setAppointments] = useState([]);
   const [queue, setQueue] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [startingId, setStartingId] = useState(null);
   const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(location.state?.message || null);
 
   const fetchDoctorData = async () => {
     setLoading(true);
@@ -36,6 +39,18 @@ const DoctorDashboard = () => {
   const handleLogout = async () => {
     await logout();
     navigate('/login', { replace: true });
+  };
+
+  const handleStartConsultation = async (appointmentId) => {
+    setStartingId(appointmentId);
+    setError(null);
+    try {
+      await api.patch(`/api/appointments/${appointmentId}/start-consultation`);
+      navigate(`/doctor/consultation/${appointmentId}`);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to start consultation');
+      setStartingId(null);
+    }
   };
 
   const getStatusBadge = (status) => {
@@ -91,7 +106,7 @@ const DoctorDashboard = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-white">CareLink</h1>
-            <p className="text-xs text-slate-400 mt-0.5">Doctor Consultation & Queue Portal</p>
+            <p className="text-xs text-slate-400 mt-0.5">Doctor Consultation Portal</p>
           </div>
           <div className="flex items-center space-x-3">
             <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-cyan-950/80 border border-cyan-700/80 text-cyan-300">
@@ -118,8 +133,20 @@ const DoctorDashboard = () => {
         </div>
 
         {error && (
-          <div className="p-4 rounded-lg bg-rose-950/60 border border-rose-800 text-rose-300 text-sm font-medium">
-            {error}
+          <div className="p-4 rounded-lg bg-rose-950/60 border border-rose-800 text-rose-300 text-sm font-medium flex justify-between items-center">
+            <span>{error}</span>
+            <button onClick={() => setError(null)} className="text-xs text-rose-400 font-bold ml-4">
+              &times;
+            </button>
+          </div>
+        )}
+
+        {successMessage && (
+          <div className="p-4 rounded-lg bg-emerald-950/70 border border-emerald-800 text-emerald-200 text-sm font-medium flex justify-between items-center">
+            <span>{successMessage}</span>
+            <button onClick={() => setSuccessMessage(null)} className="text-xs text-emerald-400 font-bold ml-4">
+              &times;
+            </button>
           </div>
         )}
 
@@ -127,7 +154,7 @@ const DoctorDashboard = () => {
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-bold text-white tracking-tight">Today's Queue</h3>
             <span className="text-xs text-slate-400">
-              Patients in Queue: <strong className="text-white">{queue.length}</strong>
+              Active Queue: <strong className="text-white">{queue.length}</strong>
             </span>
           </div>
 
@@ -139,44 +166,60 @@ const DoctorDashboard = () => {
           ) : queue.length === 0 ? (
             <div className="p-8 rounded-xl bg-slate-800/60 border border-slate-800 text-center space-y-1">
               <p className="text-sm font-semibold text-slate-300">No patients currently in your queue</p>
-              <p className="text-xs text-slate-400">Patients checked in by reception will appear here.</p>
+              <p className="text-xs text-slate-400">Checked-in patients placed into the queue will appear here.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {queue.map((item) => (
-                <div
-                  key={item.appointmentId}
-                  className="bg-slate-800 border border-indigo-900/70 rounded-xl p-4 shadow-lg space-y-3 relative overflow-hidden"
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center space-x-2">
-                      <span className="w-6 h-6 flex items-center justify-center rounded-full bg-indigo-600 text-white font-bold text-xs">
-                        #{item.position}
-                      </span>
-                      <h4 className="text-sm font-bold text-white">{item.patientName}</h4>
+              {queue.map((item) => {
+                const isStarting = startingId === item.appointmentId;
+                return (
+                  <div
+                    key={item.appointmentId}
+                    className="bg-slate-800 border border-indigo-900/70 rounded-xl p-4 shadow-lg space-y-3 relative overflow-hidden"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center space-x-2">
+                        <span className="w-6 h-6 flex items-center justify-center rounded-full bg-indigo-600 text-white font-bold text-xs">
+                          #{item.position}
+                        </span>
+                        <h4 className="text-sm font-bold text-white">{item.patientName}</h4>
+                      </div>
+                      <span className="text-xs font-mono text-slate-400">{item.appointmentTime}</span>
                     </div>
-                    <span className="text-xs font-mono text-slate-400">{item.appointmentTime}</span>
-                  </div>
 
-                  {item.reason && (
-                    <p className="text-xs text-slate-300 italic truncate">
-                      "{item.reason}"
-                    </p>
-                  )}
+                    {item.reason && (
+                      <p className="text-xs text-slate-300 italic truncate">
+                        "{item.reason}"
+                      </p>
+                    )}
 
-                  <div className="pt-2 border-t border-slate-700/60 flex justify-between items-center">
-                    <span className="px-2 py-0.5 text-[11px] font-semibold rounded bg-indigo-950 border border-indigo-700 text-indigo-300">
-                      IN QUEUE
-                    </span>
-                    <Link
-                      to={`/doctor/appointments/${item.appointmentId}`}
-                      className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm"
-                    >
-                      Open
-                    </Link>
+                    <div className="pt-2 border-t border-slate-700/60 flex justify-between items-center">
+                      <span className="px-2 py-0.5 text-[11px] font-semibold rounded bg-indigo-950 border border-indigo-700 text-indigo-300">
+                        {item.status}
+                      </span>
+
+                      {item.status === 'IN_QUEUE' && (
+                        <button
+                          onClick={() => handleStartConsultation(item.appointmentId)}
+                          disabled={isStarting}
+                          className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm cursor-pointer"
+                        >
+                          {isStarting ? 'Starting...' : 'Start Consultation'}
+                        </button>
+                      )}
+
+                      {item.status === 'IN_CONSULTATION' && (
+                        <Link
+                          to={`/doctor/consultation/${item.appointmentId}`}
+                          className="px-3 py-1 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm"
+                        >
+                          Continue Consultation
+                        </Link>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -202,7 +245,7 @@ const DoctorDashboard = () => {
               {appointments.map((apt) => (
                 <div
                   key={apt.id}
-                  className="bg-slate-800 border border-slate-700/80 rounded-xl p-4 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                  className="bg-slate-800 border border-slate-700/80 rounded-xl p-5 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                 >
                   <div className="space-y-1">
                     <div className="flex items-center space-x-3">
@@ -229,12 +272,41 @@ const DoctorDashboard = () => {
                     )}
                   </div>
 
-                  <Link
-                    to={`/doctor/appointments/${apt.id}`}
-                    className="self-start sm:self-auto px-4 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm text-center"
-                  >
-                    View Appointment
-                  </Link>
+                  <div className="flex items-center space-x-2">
+                    {apt.status === 'IN_QUEUE' && (
+                      <button
+                        onClick={() => handleStartConsultation(apt.id)}
+                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm cursor-pointer"
+                      >
+                        Start Consultation
+                      </button>
+                    )}
+
+                    {apt.status === 'IN_CONSULTATION' && (
+                      <Link
+                        to={`/doctor/consultation/${apt.id}`}
+                        className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm"
+                      >
+                        Continue Consultation
+                      </Link>
+                    )}
+
+                    {apt.status === 'COMPLETED' && apt.consultationId && (
+                      <Link
+                        to={`/patient/consultations/${apt.consultationId}`}
+                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm"
+                      >
+                        View Consultation
+                      </Link>
+                    )}
+
+                    <Link
+                      to={`/doctor/appointments/${apt.id}`}
+                      className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm text-center"
+                    >
+                      Details
+                    </Link>
+                  </div>
                 </div>
               ))}
             </div>

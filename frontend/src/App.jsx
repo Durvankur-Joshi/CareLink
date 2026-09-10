@@ -12,6 +12,8 @@ import BookAppointment from './pages/BookAppointment';
 import PatientAppointments from './pages/PatientAppointments';
 import DoctorAppointmentDetail from './pages/DoctorAppointmentDetail';
 import ReceptionAppointmentDetail from './pages/ReceptionAppointmentDetail';
+import DoctorConsultation from './pages/DoctorConsultation';
+import PatientConsultationView from './pages/PatientConsultationView';
 
 const RootRedirect = () => {
   const { user, isAuthenticated, loading } = useAuth();
@@ -104,6 +106,22 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['DOCTOR']}>
                 <DoctorAppointmentDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/doctor/consultation/:appointmentId"
+            element={
+              <ProtectedRoute allowedRoles={['DOCTOR']}>
+                <DoctorConsultation />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/patient/consultations/:id"
+            element={
+              <ProtectedRoute allowedRoles={['PATIENT', 'DOCTOR']}>
+                <PatientConsultationView />
               </ProtectedRoute>
             }
           />

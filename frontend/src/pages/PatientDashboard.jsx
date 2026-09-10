@@ -15,8 +15,8 @@ const PatientDashboard = () => {
       const response = await api.get('/api/appointments/my');
       const appointments = response.data?.data?.appointments || [];
       const current = appointments.find(
-        (a) => a.status === 'IN_QUEUE' || a.status === 'CHECKED_IN' || a.status === 'BOOKED'
-      );
+        (a) => a.status === 'IN_CONSULTATION' || a.status === 'IN_QUEUE' || a.status === 'CHECKED_IN' || a.status === 'BOOKED'
+      ) || appointments.find((a) => a.status === 'COMPLETED');
       setActiveAppointment(current || null);
     } catch (err) {
       setActiveAppointment(null);
@@ -35,6 +35,14 @@ const PatientDashboard = () => {
   };
 
   const renderStatusDetails = (appointment) => {
+    if (appointment.status === 'IN_CONSULTATION') {
+      return (
+        <span className="px-2 py-0.5 text-xs font-bold rounded bg-cyan-950 border border-cyan-700 text-cyan-300 animate-pulse">
+          In Consultation
+        </span>
+      );
+    }
+
     if (appointment.status === 'IN_QUEUE') {
       return (
         <div className="space-y-1">
@@ -56,6 +64,14 @@ const PatientDashboard = () => {
       return (
         <span className="px-2 py-0.5 text-xs font-bold rounded bg-amber-950 border border-amber-700 text-amber-300">
           ✓ Checked In
+        </span>
+      );
+    }
+
+    if (appointment.status === 'COMPLETED') {
+      return (
+        <span className="px-2 py-0.5 text-xs font-bold rounded bg-emerald-950 border border-emerald-700 text-emerald-300">
+          ✓ Completed
         </span>
       );
     }
@@ -88,7 +104,7 @@ const PatientDashboard = () => {
         <div className="rounded-lg bg-slate-900/80 p-4 border border-slate-700/70 space-y-3">
           <div className="flex justify-between items-center">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-              Upcoming Appointment
+              Current / Latest Appointment
             </span>
             <button
               onClick={fetchActiveAppointment}
@@ -110,9 +126,19 @@ const PatientDashboard = () => {
               <p className="text-xs text-slate-300">
                 {activeAppointment.appointmentDate} at {activeAppointment.appointmentTime}
               </p>
+              {activeAppointment.status === 'COMPLETED' && (
+                <div className="pt-2">
+                  <Link
+                    to={`/patient/consultations/${activeAppointment.consultationId || activeAppointment.id}`}
+                    className="inline-block px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm"
+                  >
+                    View Consultation Summary &rarr;
+                  </Link>
+                </div>
+              )}
             </div>
           ) : (
-            <p className="text-xs text-slate-400 pt-1">No upcoming appointments found.</p>
+            <p className="text-xs text-slate-400 pt-1">No appointments found.</p>
           )}
         </div>
 

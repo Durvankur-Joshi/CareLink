@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../lib/api';
 
 const DoctorAppointmentDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [appointment, setAppointment] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [starting, setStarting] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -25,6 +27,18 @@ const DoctorAppointmentDetail = () => {
     fetchAppointment();
   }, [id]);
 
+  const handleStartConsultation = async () => {
+    setStarting(true);
+    setError(null);
+    try {
+      await api.patch(`/api/appointments/${id}/start-consultation`);
+      navigate(`/doctor/consultation/${id}`);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to start consultation');
+      setStarting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center p-6">
@@ -36,7 +50,7 @@ const DoctorAppointmentDetail = () => {
     );
   }
 
-  if (error || !appointment) {
+  if (error && !appointment) {
     return (
       <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center p-6">
         <div className="max-w-md w-full bg-slate-800 border border-slate-700 rounded-xl p-6 text-center space-y-4">
@@ -65,6 +79,12 @@ const DoctorAppointmentDetail = () => {
           <h1 className="text-2xl font-bold tracking-tight text-white">Appointment Details</h1>
           <p className="text-sm text-slate-400 mt-0.5">Review patient information and scheduled consultation details</p>
         </div>
+
+        {error && (
+          <div className="p-4 rounded-lg bg-rose-950/60 border border-rose-800 text-rose-300 text-sm font-medium">
+            {error}
+          </div>
+        )}
 
         <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 shadow-xl space-y-6">
           <div className="flex justify-between items-center border-b border-slate-700 pb-4">
@@ -115,13 +135,43 @@ const DoctorAppointmentDetail = () => {
             </div>
           </div>
 
-          <div className="pt-2 border-t border-slate-700 flex justify-end">
+          <div className="pt-3 border-t border-slate-700 flex justify-between items-center">
             <Link
               to="/doctor/dashboard"
               className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold rounded-lg transition-colors"
             >
               Close
             </Link>
+
+            <div className="flex items-center space-x-3">
+              {appointment.status === 'IN_QUEUE' && (
+                <button
+                  onClick={handleStartConsultation}
+                  disabled={starting}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm cursor-pointer"
+                >
+                  {starting ? 'Starting...' : 'Start Consultation'}
+                </button>
+              )}
+
+              {appointment.status === 'IN_CONSULTATION' && (
+                <Link
+                  to={`/doctor/consultation/${appointment.id}`}
+                  className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm"
+                >
+                  Continue Consultation
+                </Link>
+              )}
+
+              {appointment.status === 'COMPLETED' && (
+                <Link
+                  to={`/patient/consultations/${appointment.consultationId || appointment.id}`}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm"
+                >
+                  View Consultation Notes
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -130,3 +180,5 @@ const DoctorAppointmentDetail = () => {
 };
 
 export default DoctorAppointmentDetail;
+
+

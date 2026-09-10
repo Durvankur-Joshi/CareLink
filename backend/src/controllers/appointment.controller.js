@@ -148,6 +148,11 @@ const getPatientAppointments = async (req, res) => {
               }
             }
           }
+        },
+        consultation: {
+          select: {
+            id: true
+          }
         }
       },
       orderBy: [
@@ -210,6 +215,7 @@ const getPatientAppointments = async (req, res) => {
         reason: apt.reason,
         status: apt.status,
         queuePosition,
+        consultationId: apt.consultation?.id || null,
         createdAt: apt.createdAt
       };
     });
@@ -253,6 +259,11 @@ const getDoctorAppointments = async (req, res) => {
               }
             }
           }
+        },
+        consultation: {
+          select: {
+            id: true
+          }
         }
       },
       orderBy: [
@@ -270,6 +281,7 @@ const getDoctorAppointments = async (req, res) => {
       appointmentTime: apt.appointmentTime,
       reason: apt.reason,
       status: apt.status,
+      consultationId: apt.consultation?.id || null,
       createdAt: apt.createdAt
     }));
 
@@ -306,7 +318,9 @@ const getDoctorQueue = async (req, res) => {
       where: {
         doctorId: doctor.id,
         appointmentDate: todayStr,
-        status: 'IN_QUEUE'
+        status: {
+          in: ['IN_QUEUE', 'IN_CONSULTATION']
+        }
       },
       include: {
         patient: {
@@ -350,6 +364,65 @@ const getDoctorQueue = async (req, res) => {
   }
 };
 
+const startConsultation = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const doctor = await prisma.doctor.findUnique({
+      where: { userId: req.user.id }
+    });
+
+    if (!doctor) {
+      return res.status(404).json({
+        success: false,
+        message: 'Doctor profile not found'
+      });
+    }
+
+    const appointment = await prisma.appointment.findUnique({
+      where: { id }
+    });
+
+    if (!appointment || appointment.doctorId !== doctor.id) {
+      return res.status(404).json({
+        success: false,
+        message: 'Appointment not found'
+      });
+    }
+
+    if (appointment.status !== 'IN_QUEUE') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid appointment status transition'
+      });
+    }
+
+    const updated = await prisma.appointment.update({
+      where: { id },
+      data: { status: 'IN_CONSULTATION' },
+      select: {
+        id: true,
+        status: true,
+        appointmentDate: true,
+        appointmentTime: true
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Consultation started',
+      data: {
+        appointment: updated
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to start consultation'
+    });
+  }
+};
+
 const getAppointmentById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -377,6 +450,11 @@ const getAppointmentById = async (req, res) => {
                 email: true
               }
             }
+          }
+        },
+        consultation: {
+          select: {
+            id: true
           }
         }
       }
@@ -408,6 +486,7 @@ const getAppointmentById = async (req, res) => {
           appointmentTime: appointment.appointmentTime,
           reason: appointment.reason,
           status: appointment.status,
+          consultationId: appointment.consultation?.id || null,
           createdAt: appointment.createdAt,
           patient: {
             id: appointment.patient.id,
@@ -437,5 +516,6 @@ module.exports = {
   getPatientAppointments,
   getDoctorAppointments,
   getDoctorQueue,
+  startConsultation,
   getAppointmentById
 };
