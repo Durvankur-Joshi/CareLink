@@ -12,6 +12,10 @@ import BookAppointment from './pages/BookAppointment';
 import PatientAppointments from './pages/PatientAppointments';
 import DoctorAppointmentDetail from './pages/DoctorAppointmentDetail';
 import ReceptionAppointmentDetail from './pages/ReceptionAppointmentDetail';
+import PatientPrescriptions from './pages/PatientPrescriptions';
+import PatientPrescriptionDetail from './pages/PatientPrescriptionDetail';
+import DoctorPrescriptionCreate from './pages/DoctorPrescriptionCreate';
+import DoctorPrescriptionView from './pages/DoctorPrescriptionView';
 
 const RootRedirect = () => {
   const { user, isAuthenticated, loading } = useAuth();
@@ -92,6 +96,22 @@ function App() {
             }
           />
           <Route
+            path="/patient/prescriptions"
+            element={
+              <ProtectedRoute allowedRoles={['PATIENT']}>
+                <PatientPrescriptions />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/patient/prescriptions/:id"
+            element={
+              <ProtectedRoute allowedRoles={['PATIENT']}>
+                <PatientPrescriptionDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/doctor/dashboard"
             element={
               <ProtectedRoute allowedRoles={['DOCTOR']}>
@@ -104,6 +124,22 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['DOCTOR']}>
                 <DoctorAppointmentDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/doctor/appointments/:appointmentId/prescribe"
+            element={
+              <ProtectedRoute allowedRoles={['DOCTOR']}>
+                <DoctorPrescriptionCreate />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/doctor/prescriptions/:id"
+            element={
+              <ProtectedRoute allowedRoles={['DOCTOR']}>
+                <DoctorPrescriptionView />
               </ProtectedRoute>
             }
           />

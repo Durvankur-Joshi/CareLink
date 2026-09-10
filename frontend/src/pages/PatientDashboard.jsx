@@ -9,6 +9,8 @@ const PatientDashboard = () => {
 
   const [activeAppointment, setActiveAppointment] = useState(null);
   const [loadingApt, setLoadingApt] = useState(true);
+  const [latestPrescription, setLatestPrescription] = useState(null);
+  const [loadingRx, setLoadingRx] = useState(true);
 
   const fetchActiveAppointment = async () => {
     try {
@@ -25,8 +27,21 @@ const PatientDashboard = () => {
     }
   };
 
+  const fetchLatestPrescription = async () => {
+    try {
+      const response = await api.get('/api/prescriptions/my');
+      const prescriptions = response.data?.data?.prescriptions || [];
+      setLatestPrescription(prescriptions.length > 0 ? prescriptions[0] : null);
+    } catch (err) {
+      setLatestPrescription(null);
+    } finally {
+      setLoadingRx(false);
+    }
+  };
+
   useEffect(() => {
     fetchActiveAppointment();
+    fetchLatestPrescription();
   }, []);
 
   const handleLogout = async () => {
@@ -116,6 +131,42 @@ const PatientDashboard = () => {
           )}
         </div>
 
+        <div className="rounded-lg bg-slate-900/80 p-4 border border-slate-700/70 space-y-3">
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+            Latest Prescription
+          </span>
+
+          {loadingRx ? (
+            <p className="text-xs text-slate-400">Loading prescription...</p>
+          ) : latestPrescription ? (
+            <div className="space-y-2 pt-1">
+              <div className="flex justify-between items-start">
+                <span className="text-sm font-bold text-white">
+                  Dr. {latestPrescription.doctor?.name}
+                </span>
+                <span className="px-2 py-0.5 text-[11px] font-semibold rounded bg-indigo-950 border border-indigo-700 text-indigo-300">
+                  {latestPrescription.medicineCount} medicine{latestPrescription.medicineCount !== 1 ? 's' : ''}
+                </span>
+              </div>
+              <p className="text-xs text-slate-400">
+                {new Date(latestPrescription.createdAt).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric'
+                })}
+              </p>
+              <Link
+                to={`/patient/prescriptions/${latestPrescription.id}`}
+                className="inline-block px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-semibold rounded-lg transition-colors"
+              >
+                View Prescription
+              </Link>
+            </div>
+          ) : (
+            <p className="text-xs text-slate-400 pt-1">No prescriptions yet.</p>
+          )}
+        </div>
+
         <div className="space-y-2.5">
           <Link
             to="/patient/doctors"
@@ -128,6 +179,12 @@ const PatientDashboard = () => {
             className="w-full block py-2.5 px-4 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-semibold rounded-lg text-center transition-colors"
           >
             My Appointments
+          </Link>
+          <Link
+            to="/patient/prescriptions"
+            className="w-full block py-2.5 px-4 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-semibold rounded-lg text-center transition-colors"
+          >
+            My Prescriptions
           </Link>
         </div>
 
@@ -145,3 +202,4 @@ const PatientDashboard = () => {
 };
 
 export default PatientDashboard;
+

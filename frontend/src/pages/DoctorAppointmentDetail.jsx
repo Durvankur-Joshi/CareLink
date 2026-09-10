@@ -7,6 +7,7 @@ const DoctorAppointmentDetail = () => {
   const [appointment, setAppointment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [existingPrescription, setExistingPrescription] = useState(undefined);
 
   useEffect(() => {
     const fetchAppointment = async () => {
@@ -22,8 +23,24 @@ const DoctorAppointmentDetail = () => {
       }
     };
 
+    const fetchPrescription = async () => {
+      try {
+        const response = await api.get(`/api/prescriptions/appointment/${id}`);
+        setExistingPrescription(response.data?.data?.prescription || null);
+      } catch (err) {
+        setExistingPrescription(null);
+      }
+    };
+
     fetchAppointment();
+    fetchPrescription();
   }, [id]);
+
+  const canPrescribe = appointment &&
+    ['IN_CONSULTATION', 'COMPLETED'].includes(appointment.status) &&
+    existingPrescription === null;
+
+  const hasPrescription = existingPrescription && existingPrescription.id;
 
   if (loading) {
     return (
@@ -115,6 +132,35 @@ const DoctorAppointmentDetail = () => {
             </div>
           </div>
 
+          {(canPrescribe || hasPrescription) && (
+            <div className="space-y-3 pt-2 border-t border-slate-700">
+              <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">Prescription</div>
+              {hasPrescription ? (
+                <div className="p-4 rounded-lg bg-emerald-950/30 border border-emerald-800/40 flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <p className="text-sm font-semibold text-emerald-300">Prescription Created</p>
+                    <p className="text-xs text-emerald-400/70">
+                      {existingPrescription.items?.length || 0} medicine{(existingPrescription.items?.length || 0) !== 1 ? 's' : ''} prescribed
+                    </p>
+                  </div>
+                  <Link
+                    to={`/doctor/prescriptions/${existingPrescription.id}`}
+                    className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm"
+                  >
+                    View Prescription
+                  </Link>
+                </div>
+              ) : (
+                <Link
+                  to={`/doctor/appointments/${id}/prescribe`}
+                  className="block w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg text-center transition-colors shadow-sm"
+                >
+                  Write Prescription
+                </Link>
+              )}
+            </div>
+          )}
+
           <div className="pt-2 border-t border-slate-700 flex justify-end">
             <Link
               to="/doctor/dashboard"
@@ -130,3 +176,4 @@ const DoctorAppointmentDetail = () => {
 };
 
 export default DoctorAppointmentDetail;
+
