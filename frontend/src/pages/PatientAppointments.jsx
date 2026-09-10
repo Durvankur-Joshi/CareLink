@@ -175,6 +175,14 @@ const PatientAppointments = () => {
 
                 <div className="flex items-center space-x-3 self-start sm:self-auto">
                   {getStatusBadge(apt)}
+                  {apt.status === 'COMPLETED' && (
+                    <Link
+                      to={`/patient/consultations/${apt.consultationId || apt.id}`}
+                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm"
+                    >
+                      View Notes
+                    </Link>
+                  )}
                 </div>
               </div>
             ))}

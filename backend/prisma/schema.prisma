@@ -39,7 +39,9 @@ model Patient {
   userId        String         @unique
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   appointments  Appointment[]
-  prescriptions Prescription[]
+  consultations Consultation[]
+  labOrders     LabOrder[]
+  reports       Report[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 }
@@ -54,7 +56,9 @@ model Doctor {
   consultationFee Float          @default(0)
   bio             String?
   appointments    Appointment[]
-  prescriptions   Prescription[]
+  consultations   Consultation[]
+  labOrders       LabOrder[]
+  reports         Report[]
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 }
@@ -69,33 +73,67 @@ model Appointment {
   appointmentTime String
   reason          String?
   status          AppointmentStatus @default(BOOKED)
-  prescription    Prescription?
+  consultation    Consultation?
+  labOrders       LabOrder[]
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 }
 
-model Prescription {
-  id            String             @id @default(uuid())
-  patientId     String
-  patient       Patient            @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  doctorId      String
-  doctor        Doctor             @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  appointmentId String             @unique
-  appointment   Appointment        @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
-  notes         String?
-  items         PrescriptionItem[]
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
+model Consultation {
+  id             String      @id @default(uuid())
+  appointmentId  String      @unique
+  appointment    Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  patientId      String
+  patient        Patient     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctorId       String
+  doctor         Doctor      @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  symptoms       String
+  notes          String
+  diagnosis      String
+  treatmentNotes String
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 }
 
-model PrescriptionItem {
-  id             String       @id @default(uuid())
-  prescriptionId String
-  prescription   Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
-  medicineName   String
-  dosage         String
-  frequency      String
-  duration       String
-  instructions   String?
-  createdAt      DateTime     @default(now())
+enum LabOrderStatus {
+  ORDERED
+  PENDING
+  UPLOADED
+  REVIEWED
+  CANCELLED
 }
+
+model LabOrder {
+  id            String         @id @default(uuid())
+  patientId     String
+  patient       Patient        @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctorId      String
+  doctor        Doctor         @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  appointmentId String
+  appointment   Appointment    @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  testName      String
+  instructions  String?
+  status        LabOrderStatus @default(ORDERED)
+  report        Report?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Report {
+  id         String    @id @default(uuid())
+  labOrderId String    @unique
+  labOrder   LabOrder  @relation(fields: [labOrderId], references: [id], onDelete: Cascade)
+  patientId  String
+  patient    Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctorId   String
+  doctor     Doctor    @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  fileName   String
+  filePath   String
+  fileType   String
+  fileSize   Int
+  uploadedAt DateTime  @default(now())
+  reviewedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+

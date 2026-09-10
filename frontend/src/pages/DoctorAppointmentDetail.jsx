@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../lib/api';
 
 const DoctorAppointmentDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [appointment, setAppointment] = useState(null);
+  const [labOrders, setLabOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [starting, setStarting] = useState(false);
   const [error, setError] = useState(null);
   const [existingPrescription, setExistingPrescription] = useState(undefined);
 
@@ -14,8 +17,12 @@ const DoctorAppointmentDetail = () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await api.get(`/api/appointments/${id}`);
-        setAppointment(response.data?.data?.appointment || null);
+        const [aptRes, labRes] = await Promise.all([
+          api.get(`/api/appointments/${id}`),
+          api.get(`/api/labs/orders/appointment/${id}`).catch(() => ({ data: { data: { labOrders: [] } } }))
+        ]);
+        setAppointment(aptRes.data?.data?.appointment || null);
+        setLabOrders(labRes.data?.data?.labOrders || []);
       } catch (err) {
         setError(err.response?.data?.message || 'Failed to load appointment details');
       } finally {
@@ -36,11 +43,17 @@ const DoctorAppointmentDetail = () => {
     fetchPrescription();
   }, [id]);
 
-  const canPrescribe = appointment &&
-    ['IN_CONSULTATION', 'COMPLETED'].includes(appointment.status) &&
-    existingPrescription === null;
-
-  const hasPrescription = existingPrescription && existingPrescription.id;
+  const handleStartConsultation = async () => {
+    setStarting(true);
+    setError(null);
+    try {
+      await api.patch(`/api/appointments/${id}/start-consultation`);
+      navigate(`/doctor/consultation/${id}`);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to start consultation');
+      setStarting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -53,7 +66,7 @@ const DoctorAppointmentDetail = () => {
     );
   }
 
-  if (error || !appointment) {
+  if (error && !appointment) {
     return (
       <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center p-6">
         <div className="max-w-md w-full bg-slate-800 border border-slate-700 rounded-xl p-6 text-center space-y-4">
@@ -82,6 +95,12 @@ const DoctorAppointmentDetail = () => {
           <h1 className="text-2xl font-bold tracking-tight text-white">Appointment Details</h1>
           <p className="text-sm text-slate-400 mt-0.5">Review patient information and scheduled consultation details</p>
         </div>
+
+        {error && (
+          <div className="p-4 rounded-lg bg-rose-950/60 border border-rose-800 text-rose-300 text-sm font-medium">
+            {error}
+          </div>
+        )}
 
         <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 shadow-xl space-y-6">
           <div className="flex justify-between items-center border-b border-slate-700 pb-4">
@@ -132,42 +151,68 @@ const DoctorAppointmentDetail = () => {
             </div>
           </div>
 
-          {(canPrescribe || hasPrescription) && (
-            <div className="space-y-3 pt-2 border-t border-slate-700">
-              <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">Prescription</div>
-              {hasPrescription ? (
-                <div className="p-4 rounded-lg bg-emerald-950/30 border border-emerald-800/40 flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <p className="text-sm font-semibold text-emerald-300">Prescription Created</p>
-                    <p className="text-xs text-emerald-400/70">
-                      {existingPrescription.items?.length || 0} medicine{(existingPrescription.items?.length || 0) !== 1 ? 's' : ''} prescribed
-                    </p>
+          {labOrders.length > 0 && (
+            <div className="space-y-3">
+              <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">Diagnostic Lab Orders ({labOrders.length})</div>
+              <div className="p-4 rounded-lg bg-slate-900/70 border border-slate-700/60 space-y-2">
+                {labOrders.map((o) => (
+                  <div key={o.id} className="flex justify-between items-center text-xs border-b border-slate-800 last:border-0 pb-2 last:pb-0">
+                    <div>
+                      <span className="font-bold text-white">{o.testName}</span>
+                      {o.instructions && <span className="text-slate-400 ml-2">({o.instructions})</span>}
+                    </div>
+                    <span className={`px-2 py-0.5 text-[11px] font-semibold rounded border ${
+                      o.status === 'REVIEWED'
+                        ? 'bg-emerald-950 border-emerald-700 text-emerald-300'
+                        : o.status === 'UPLOADED'
+                        ? 'bg-cyan-950 border-cyan-700 text-cyan-300'
+                        : 'bg-amber-950 border-amber-700 text-amber-300'
+                    }`}>
+                      {o.status}
+                    </span>
                   </div>
-                  <Link
-                    to={`/doctor/prescriptions/${existingPrescription.id}`}
-                    className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm"
-                  >
-                    View Prescription
-                  </Link>
-                </div>
-              ) : (
-                <Link
-                  to={`/doctor/appointments/${id}/prescribe`}
-                  className="block w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg text-center transition-colors shadow-sm"
-                >
-                  Write Prescription
-                </Link>
-              )}
+                ))}
+              </div>
             </div>
           )}
 
-          <div className="pt-2 border-t border-slate-700 flex justify-end">
+          <div className="pt-3 border-t border-slate-700 flex justify-between items-center">
             <Link
               to="/doctor/dashboard"
               className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold rounded-lg transition-colors"
             >
               Close
             </Link>
+
+            <div className="flex items-center space-x-3">
+              {appointment.status === 'IN_QUEUE' && (
+                <button
+                  onClick={handleStartConsultation}
+                  disabled={starting}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm cursor-pointer"
+                >
+                  {starting ? 'Starting...' : 'Start Consultation'}
+                </button>
+              )}
+
+              {appointment.status === 'IN_CONSULTATION' && (
+                <Link
+                  to={`/doctor/consultation/${appointment.id}`}
+                  className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm"
+                >
+                  Continue Consultation
+                </Link>
+              )}
+
+              {appointment.status === 'COMPLETED' && (
+                <Link
+                  to={`/patient/consultations/${appointment.consultationId || appointment.id}`}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm"
+                >
+                  View Consultation Notes
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -176,4 +221,5 @@ const DoctorAppointmentDetail = () => {
 };
 
 export default DoctorAppointmentDetail;
+
 

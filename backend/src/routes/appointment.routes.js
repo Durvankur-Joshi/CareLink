@@ -4,6 +4,7 @@ const {
   getPatientAppointments,
   getDoctorAppointments,
   getDoctorQueue,
+  startConsultation,
   getAppointmentById
 } = require('../controllers/appointment.controller');
 const authMiddleware = require('../middleware/auth.middleware');
@@ -15,6 +16,7 @@ router.post('/', authMiddleware, authorizeRoles('PATIENT'), bookAppointment);
 router.get('/my', authMiddleware, authorizeRoles('PATIENT'), getPatientAppointments);
 router.get('/doctor', authMiddleware, authorizeRoles('DOCTOR'), getDoctorAppointments);
 router.get('/doctor/queue', authMiddleware, authorizeRoles('DOCTOR'), getDoctorQueue);
+router.patch('/:id/start-consultation', authMiddleware, authorizeRoles('DOCTOR'), startConsultation);
 router.get('/:id', authMiddleware, authorizeRoles('PATIENT', 'DOCTOR'), getAppointmentById);
 
 module.exports = router;

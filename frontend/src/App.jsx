@@ -12,10 +12,9 @@ import BookAppointment from './pages/BookAppointment';
 import PatientAppointments from './pages/PatientAppointments';
 import DoctorAppointmentDetail from './pages/DoctorAppointmentDetail';
 import ReceptionAppointmentDetail from './pages/ReceptionAppointmentDetail';
-import PatientPrescriptions from './pages/PatientPrescriptions';
-import PatientPrescriptionDetail from './pages/PatientPrescriptionDetail';
-import DoctorPrescriptionCreate from './pages/DoctorPrescriptionCreate';
-import DoctorPrescriptionView from './pages/DoctorPrescriptionView';
+import DoctorConsultation from './pages/DoctorConsultation';
+import PatientConsultationView from './pages/PatientConsultationView';
+import PatientLabs from './pages/PatientLabs';
 
 const RootRedirect = () => {
   const { user, isAuthenticated, loading } = useAuth();
@@ -96,18 +95,10 @@ function App() {
             }
           />
           <Route
-            path="/patient/prescriptions"
+            path="/patient/labs"
             element={
               <ProtectedRoute allowedRoles={['PATIENT']}>
-                <PatientPrescriptions />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/patient/prescriptions/:id"
-            element={
-              <ProtectedRoute allowedRoles={['PATIENT']}>
-                <PatientPrescriptionDetail />
+                <PatientLabs />
               </ProtectedRoute>
             }
           />
@@ -128,18 +119,18 @@ function App() {
             }
           />
           <Route
-            path="/doctor/appointments/:appointmentId/prescribe"
+            path="/doctor/consultation/:appointmentId"
             element={
               <ProtectedRoute allowedRoles={['DOCTOR']}>
-                <DoctorPrescriptionCreate />
+                <DoctorConsultation />
               </ProtectedRoute>
             }
           />
           <Route
-            path="/doctor/prescriptions/:id"
+            path="/patient/consultations/:id"
             element={
-              <ProtectedRoute allowedRoles={['DOCTOR']}>
-                <DoctorPrescriptionView />
+              <ProtectedRoute allowedRoles={['PATIENT', 'DOCTOR']}>
+                <PatientConsultationView />
               </ProtectedRoute>
             }
           />
