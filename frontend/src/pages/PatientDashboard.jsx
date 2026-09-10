@@ -7,29 +7,64 @@ const PatientDashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const [upcomingAppointment, setUpcomingAppointment] = useState(null);
+  const [activeAppointment, setActiveAppointment] = useState(null);
   const [loadingApt, setLoadingApt] = useState(true);
 
-  useEffect(() => {
-    const fetchUpcoming = async () => {
-      try {
-        const response = await api.get('/api/appointments/my');
-        const appointments = response.data?.data?.appointments || [];
-        const booked = appointments.find((a) => a.status === 'BOOKED');
-        setUpcomingAppointment(booked || null);
-      } catch (err) {
-        setUpcomingAppointment(null);
-      } finally {
-        setLoadingApt(false);
-      }
-    };
+  const fetchActiveAppointment = async () => {
+    try {
+      const response = await api.get('/api/appointments/my');
+      const appointments = response.data?.data?.appointments || [];
+      const current = appointments.find(
+        (a) => a.status === 'IN_QUEUE' || a.status === 'CHECKED_IN' || a.status === 'BOOKED'
+      );
+      setActiveAppointment(current || null);
+    } catch (err) {
+      setActiveAppointment(null);
+    } finally {
+      setLoadingApt(false);
+    }
+  };
 
-    fetchUpcoming();
+  useEffect(() => {
+    fetchActiveAppointment();
   }, []);
 
   const handleLogout = async () => {
     await logout();
     navigate('/login', { replace: true });
+  };
+
+  const renderStatusDetails = (appointment) => {
+    if (appointment.status === 'IN_QUEUE') {
+      return (
+        <div className="space-y-1">
+          <div className="flex items-center space-x-2">
+            <span className="px-2 py-0.5 text-xs font-bold rounded bg-indigo-950 border border-indigo-700 text-indigo-300">
+              {appointment.queuePosition ? `#${appointment.queuePosition} In Queue` : 'In Queue'}
+            </span>
+          </div>
+          {appointment.queuePosition && (
+            <p className="text-xs text-indigo-300 font-medium">
+              You are #{appointment.queuePosition} in the queue
+            </p>
+          )}
+        </div>
+      );
+    }
+
+    if (appointment.status === 'CHECKED_IN') {
+      return (
+        <span className="px-2 py-0.5 text-xs font-bold rounded bg-amber-950 border border-amber-700 text-amber-300">
+          ✓ Checked In
+        </span>
+      );
+    }
+
+    return (
+      <span className="px-2 py-0.5 text-xs font-semibold rounded bg-slate-800 border border-slate-700 text-slate-300">
+        Appointment Booked
+      </span>
+    );
   };
 
   return (
@@ -50,23 +85,30 @@ const PatientDashboard = () => {
           <p className="text-xs text-slate-400 font-mono mt-0.5">{user?.email}</p>
         </div>
 
-        <div className="rounded-lg bg-slate-900/80 p-4 border border-slate-700/70 space-y-2">
-          <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-            Upcoming Appointment
+        <div className="rounded-lg bg-slate-900/80 p-4 border border-slate-700/70 space-y-3">
+          <div className="flex justify-between items-center">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+              Upcoming Appointment
+            </span>
+            <button
+              onClick={fetchActiveAppointment}
+              className="text-[11px] text-indigo-400 hover:text-indigo-300"
+            >
+              Refresh
+            </button>
           </div>
+
           {loadingApt ? (
-            <p className="text-xs text-slate-400">Checking appointment schedule...</p>
-          ) : upcomingAppointment ? (
-            <div className="space-y-1.5 pt-1">
+            <p className="text-xs text-slate-400">Checking appointment status...</p>
+          ) : activeAppointment ? (
+            <div className="space-y-2 pt-1">
               <div className="flex justify-between items-start">
-                <span className="text-sm font-bold text-white">{upcomingAppointment.doctorName}</span>
-                <span className="px-2 py-0.5 text-[11px] font-semibold rounded bg-indigo-950 border border-indigo-700 text-indigo-300">
-                  {upcomingAppointment.status}
-                </span>
+                <span className="text-sm font-bold text-white">{activeAppointment.doctorName}</span>
+                {renderStatusDetails(activeAppointment)}
               </div>
-              <p className="text-xs text-cyan-400 font-medium">{upcomingAppointment.specialization}</p>
+              <p className="text-xs text-cyan-400 font-medium">{activeAppointment.specialization}</p>
               <p className="text-xs text-slate-300">
-                {upcomingAppointment.appointmentDate} at {upcomingAppointment.appointmentTime}
+                {activeAppointment.appointmentDate} at {activeAppointment.appointmentTime}
               </p>
             </div>
           ) : (

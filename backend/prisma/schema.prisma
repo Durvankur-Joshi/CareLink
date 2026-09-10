@@ -15,8 +15,11 @@ enum Role {
 
 enum AppointmentStatus {
   BOOKED
-  CANCELLED
+  CHECKED_IN
+  IN_QUEUE
+  IN_CONSULTATION
   COMPLETED
+  CANCELLED
 }
 
 model User {

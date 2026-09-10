@@ -1,5 +1,9 @@
 const prisma = require('../lib/prisma');
 
+const getTodayDateString = () => {
+  return new Date().toISOString().split('T')[0];
+};
+
 const bookAppointment = async (req, res) => {
   try {
     const { doctorId, appointmentDate, appointmentTime, reason } = req.body;
@@ -25,7 +29,7 @@ const bookAppointment = async (req, res) => {
       });
     }
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getTodayDateString();
     if (appointmentDate < todayStr) {
       return res.status(400).json({
         success: false,
@@ -59,7 +63,9 @@ const bookAppointment = async (req, res) => {
         doctorId,
         appointmentDate,
         appointmentTime,
-        status: 'BOOKED'
+        status: {
+          in: ['BOOKED', 'CHECKED_IN', 'IN_QUEUE', 'IN_CONSULTATION']
+        }
       }
     });
 
@@ -119,6 +125,8 @@ const bookAppointment = async (req, res) => {
 
 const getPatientAppointments = async (req, res) => {
   try {
+    const todayStr = getTodayDateString();
+
     let patient = await prisma.patient.findUnique({
       where: { userId: req.user.id }
     });
@@ -148,17 +156,63 @@ const getPatientAppointments = async (req, res) => {
       ]
     });
 
-    const formatted = appointments.map((apt) => ({
-      id: apt.id,
-      doctorId: apt.doctorId,
-      doctorName: apt.doctor.user.name,
-      specialization: apt.doctor.specialization,
-      appointmentDate: apt.appointmentDate,
-      appointmentTime: apt.appointmentTime,
-      reason: apt.reason,
-      status: apt.status,
-      createdAt: apt.createdAt
-    }));
+    const activeDoctorIds = [
+      ...new Set(
+        appointments
+          .filter((a) => a.appointmentDate === todayStr && a.status === 'IN_QUEUE')
+          .map((a) => a.doctorId)
+      )
+    ];
+
+    let doctorQueues = {};
+    if (activeDoctorIds.length > 0) {
+      const queuedApts = await prisma.appointment.findMany({
+        where: {
+          doctorId: { in: activeDoctorIds },
+          appointmentDate: todayStr,
+          status: 'IN_QUEUE'
+        },
+        orderBy: [
+          { appointmentTime: 'asc' },
+          { createdAt: 'asc' }
+        ],
+        select: {
+          id: true,
+          doctorId: true
+        }
+      });
+
+      for (const apt of queuedApts) {
+        if (!doctorQueues[apt.doctorId]) {
+          doctorQueues[apt.doctorId] = [];
+        }
+        doctorQueues[apt.doctorId].push(apt.id);
+      }
+    }
+
+    const formatted = appointments.map((apt) => {
+      let queuePosition = null;
+      if (apt.appointmentDate === todayStr && apt.status === 'IN_QUEUE') {
+        const queueList = doctorQueues[apt.doctorId] || [];
+        const index = queueList.indexOf(apt.id);
+        if (index !== -1) {
+          queuePosition = index + 1;
+        }
+      }
+
+      return {
+        id: apt.id,
+        doctorId: apt.doctorId,
+        doctorName: apt.doctor.user.name,
+        specialization: apt.doctor.specialization,
+        appointmentDate: apt.appointmentDate,
+        appointmentTime: apt.appointmentTime,
+        reason: apt.reason,
+        status: apt.status,
+        queuePosition,
+        createdAt: apt.createdAt
+      };
+    });
 
     return res.status(200).json({
       success: true,
@@ -229,6 +283,69 @@ const getDoctorAppointments = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Failed to retrieve doctor appointments'
+    });
+  }
+};
+
+const getDoctorQueue = async (req, res) => {
+  try {
+    const todayStr = getTodayDateString();
+
+    const doctor = await prisma.doctor.findUnique({
+      where: { userId: req.user.id }
+    });
+
+    if (!doctor) {
+      return res.status(404).json({
+        success: false,
+        message: 'Doctor profile not found'
+      });
+    }
+
+    const queuedAppointments = await prisma.appointment.findMany({
+      where: {
+        doctorId: doctor.id,
+        appointmentDate: todayStr,
+        status: 'IN_QUEUE'
+      },
+      include: {
+        patient: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: [
+        { appointmentTime: 'asc' },
+        { createdAt: 'asc' }
+      ]
+    });
+
+    const queue = queuedAppointments.map((apt, index) => ({
+      position: index + 1,
+      appointmentId: apt.id,
+      patientId: apt.patientId,
+      patientName: apt.patient.user.name,
+      appointmentTime: apt.appointmentTime,
+      reason: apt.reason,
+      status: apt.status
+    }));
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        queue
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve doctor queue'
     });
   }
 };
@@ -319,5 +436,6 @@ module.exports = {
   bookAppointment,
   getPatientAppointments,
   getDoctorAppointments,
+  getDoctorQueue,
   getAppointmentById
 };

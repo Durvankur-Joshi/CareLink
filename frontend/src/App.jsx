@@ -11,6 +11,7 @@ import DoctorProfile from './pages/DoctorProfile';
 import BookAppointment from './pages/BookAppointment';
 import PatientAppointments from './pages/PatientAppointments';
 import DoctorAppointmentDetail from './pages/DoctorAppointmentDetail';
+import ReceptionAppointmentDetail from './pages/ReceptionAppointmentDetail';
 
 const RootRedirect = () => {
   const { user, isAuthenticated, loading } = useAuth();
@@ -111,6 +112,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['RECEPTION']}>
                 <ReceptionDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reception/appointments/:id"
+            element={
+              <ProtectedRoute allowedRoles={['RECEPTION']}>
+                <ReceptionAppointmentDetail />
               </ProtectedRoute>
             }
           />

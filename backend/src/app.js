@@ -4,6 +4,7 @@ const authRoutes = require('./routes/auth.routes');
 const testRoutes = require('./routes/test.routes');
 const doctorRoutes = require('./routes/doctor.routes');
 const appointmentRoutes = require('./routes/appointment.routes');
+const receptionRoutes = require('./routes/reception.routes');
 
 const app = express();
 
@@ -26,6 +27,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/test', testRoutes);
 app.use('/api/doctors', doctorRoutes);
 app.use('/api/appointments', appointmentRoutes);
+app.use('/api/reception', receptionRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

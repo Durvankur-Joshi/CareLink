@@ -26,30 +26,55 @@ const PatientAppointments = () => {
     fetchAppointments();
   }, []);
 
-  const getStatusBadge = (status) => {
-    switch (status) {
+  const getStatusBadge = (apt) => {
+    switch (apt.status) {
       case 'BOOKED':
         return (
-          <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-indigo-950 border border-indigo-700 text-indigo-300">
-            BOOKED
+          <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-slate-800 border border-slate-700 text-slate-300">
+            Appointment Booked
+          </span>
+        );
+      case 'CHECKED_IN':
+        return (
+          <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-amber-950 border border-amber-700 text-amber-300">
+            Checked In
+          </span>
+        );
+      case 'IN_QUEUE':
+        return (
+          <div className="flex flex-col items-end gap-0.5">
+            <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-indigo-950 border border-indigo-700 text-indigo-300">
+              In Queue
+            </span>
+            {apt.queuePosition && (
+              <span className="text-[11px] font-bold text-indigo-400">
+                #{apt.queuePosition} in line
+              </span>
+            )}
+          </div>
+        );
+      case 'IN_CONSULTATION':
+        return (
+          <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-cyan-950 border border-cyan-700 text-cyan-300">
+            Consultation Started
           </span>
         );
       case 'COMPLETED':
         return (
           <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-950 border border-emerald-700 text-emerald-300">
-            COMPLETED
+            Completed
           </span>
         );
       case 'CANCELLED':
         return (
           <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-rose-950 border border-rose-700 text-rose-300">
-            CANCELLED
+            Cancelled
           </span>
         );
       default:
         return (
           <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-slate-800 border border-slate-700 text-slate-300">
-            {status}
+            {apt.status}
           </span>
         );
     }
@@ -67,14 +92,22 @@ const PatientAppointments = () => {
               &larr; Back to Dashboard
             </Link>
             <h1 className="text-2xl font-bold tracking-tight text-white">My Appointments</h1>
-            <p className="text-sm text-slate-400 mt-0.5">Manage your upcoming and past doctor consultations</p>
+            <p className="text-sm text-slate-400 mt-0.5">Track your appointment progress and live consultation queue</p>
           </div>
-          <Link
-            to="/patient/doctors"
-            className="self-start sm:self-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm"
-          >
-            + Book New Appointment
-          </Link>
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={fetchAppointments}
+              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+            >
+              Refresh
+            </button>
+            <Link
+              to="/patient/doctors"
+              className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm"
+            >
+              + Book Doctor
+            </Link>
+          </div>
         </div>
 
         {flashMessage && (
@@ -141,7 +174,7 @@ const PatientAppointments = () => {
                 </div>
 
                 <div className="flex items-center space-x-3 self-start sm:self-auto">
-                  {getStatusBadge(apt.status)}
+                  {getStatusBadge(apt)}
                 </div>
               </div>
             ))}
